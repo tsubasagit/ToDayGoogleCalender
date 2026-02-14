@@ -1,2 +1,2 @@
-# ToDayGoogleCalender
+# TodayGoogleCalender
 Googleカレンダーの今日の予定をウィジェットへ表示するデスクトップアプリ
