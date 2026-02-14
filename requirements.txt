@@ -1,5 +1,6 @@
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
-pystray
-Pillow
+google-api-python-client==2.190.0
+google-auth-httplib2==0.3.0
+google-auth-oauthlib==1.2.4
+pystray==0.19.5
+Pillow==12.1.1
+tzdata==2025.3

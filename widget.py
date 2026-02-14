@@ -3,9 +3,10 @@ import datetime
 import threading
 import webbrowser
 import winsound
+from zoneinfo import ZoneInfo
 import pystray
 from PIL import Image, ImageDraw
-from calendar_api import get_events_for_date
+from calendar_api import get_events_for_date, is_logged_in, login
 
 
 class CalendarWidget:
@@ -39,6 +40,7 @@ class CalendarWidget:
         self.topmost = True
         self.events = []
         self.tray_icon = None
+        self.cal_tz = None  # Googleカレンダーのタイムゾーン
         self.display_date = datetime.date.today()
         self.alert_enabled = False
         self._alerted_events = set()  # 既にアラート済みのイベント(start時刻文字列)
@@ -52,9 +54,14 @@ class CalendarWidget:
         self._drag_y = 0
 
         self._build_ui()
-        self._refresh_events()
         self._setup_tray_icon()
         self._check_alerts()
+
+        # ログイン状態チェック
+        if is_logged_in():
+            self._refresh_events()
+        else:
+            self._show_login_screen()
 
     def _build_ui(self):
         # === ヘッダー（ドラッグ + ボタン群） ===
@@ -231,14 +238,14 @@ class CalendarWidget:
 
     def _check_alerts(self):
         if self.alert_enabled and self.events:
-            now = datetime.datetime.now(datetime.timezone.utc).astimezone()
+            now = self._get_now()
             for event in self.events:
                 if event.get("all_day") or "error" in event:
                     continue
                 try:
                     start_dt = datetime.datetime.fromisoformat(event["start"])
                     if start_dt.tzinfo is None:
-                        start_dt = start_dt.astimezone()
+                        start_dt = start_dt.replace(tzinfo=self.cal_tz) if self.cal_tz else start_dt.astimezone()
                     diff = (start_dt - now).total_seconds() / 60
                     key = event["start"] + event["summary"]
                     if 0 < diff <= self.ALERT_MINUTES_BEFORE and key not in self._alerted_events:
@@ -311,6 +318,54 @@ class CalendarWidget:
         self.topmost = not self.topmost
         self.root.attributes("-topmost", self.topmost)
 
+    # === ログイン画面 ===
+
+    def _show_login_screen(self):
+        for widget in self.events_frame.winfo_children():
+            widget.destroy()
+
+        tk.Label(
+            self.events_frame, text="Googleにログインしてください",
+            bg=self.BG_COLOR, fg=self.FG_COLOR,
+            font=("Segoe UI", 10), pady=16,
+        ).pack(fill=tk.X)
+
+        tk.Label(
+            self.events_frame,
+            text="カレンダーの予定を取得するには\nGoogleアカウントの認証が必要です",
+            bg=self.BG_COLOR, fg=self.TIME_COLOR,
+            font=("Segoe UI", 8), justify=tk.CENTER,
+        ).pack(fill=tk.X, padx=10)
+
+        login_btn = tk.Label(
+            self.events_frame, text="  ログイン  ", bg=self.ACCENT_COLOR,
+            fg="#1e1e2e", font=("Segoe UI", 10, "bold"),
+            cursor="hand2", pady=8,
+        )
+        login_btn.pack(pady=16)
+        login_btn.bind("<Button-1>", lambda e: self._do_login())
+
+        self._update_window_height()
+
+    def _do_login(self):
+        for widget in self.events_frame.winfo_children():
+            widget.destroy()
+        tk.Label(
+            self.events_frame, text="ブラウザで認証中...",
+            bg=self.BG_COLOR, fg=self.TIME_COLOR,
+            font=("Segoe UI", 9), pady=20,
+        ).pack(fill=tk.X)
+        self._update_window_height()
+
+        def run_login():
+            try:
+                login()
+                self.root.after(0, self._refresh_events)
+            except Exception as e:
+                self.root.after(0, lambda: self._update_display([{"error": str(e)}]))
+
+        threading.Thread(target=run_login, daemon=True).start()
+
     # === イベント取得・表示 ===
 
     def _refresh_events(self):
@@ -318,18 +373,34 @@ class CalendarWidget:
 
         def fetch():
             try:
-                events = get_events_for_date(target)
+                result = get_events_for_date(target)
+                events = result["events"]
+                tz_name = result["timezone"]
             except FileNotFoundError as e:
                 events = [{"error": str(e)}]
+                tz_name = None
             except Exception as e:
                 events = [{"error": f"エラー: {e}"}]
-            self.root.after(0, lambda: self._on_events_fetched(events))
+                tz_name = None
+            self.root.after(0, lambda: self._on_events_fetched(events, tz_name))
 
         threading.Thread(target=fetch, daemon=True).start()
 
-    def _on_events_fetched(self, events):
+    def _on_events_fetched(self, events, tz_name):
+        if tz_name:
+            self.cal_tz = ZoneInfo(tz_name)
         self.events = events
         self._update_display(events)
+
+    def _get_now(self):
+        """カレンダーのタイムゾーンでの現在時刻を返す。"""
+        if self.cal_tz:
+            return datetime.datetime.now(self.cal_tz)
+        return datetime.datetime.now(datetime.timezone.utc).astimezone()
+
+    def _get_today(self):
+        """カレンダーのタイムゾーンでの今日の日付を返す。"""
+        return self._get_now().date()
 
     def _update_display(self, events):
         for widget in self.events_frame.winfo_children():
@@ -344,18 +415,33 @@ class CalendarWidget:
             self._update_window_height()
             return
 
-        if not events:
+        now = self._get_now()
+        is_today = self.display_date == self._get_today()
+
+        # 今日表示の場合、終了済みの予定をフィルタ
+        visible_events = []
+        for event in events:
+            if is_today and not event.get("all_day", False):
+                try:
+                    end_dt = datetime.datetime.fromisoformat(event["end"])
+                    if end_dt.tzinfo is None:
+                        end_dt = end_dt.replace(tzinfo=self.cal_tz) if self.cal_tz else end_dt.astimezone()
+                    if end_dt < now:
+                        continue  # 過ぎた予定はスキップ
+                except (ValueError, KeyError):
+                    pass
+            visible_events.append(event)
+
+        if not visible_events:
+            msg = "残りの予定はありません" if is_today and events else "予定はありません"
             tk.Label(
-                self.events_frame, text="予定はありません", bg=self.BG_COLOR,
+                self.events_frame, text=msg, bg=self.BG_COLOR,
                 fg=self.TIME_COLOR, font=("Segoe UI", 10), pady=20,
             ).pack(fill=tk.X)
             self._update_window_height()
             return
 
-        now = datetime.datetime.now(datetime.timezone.utc).astimezone()
-        is_today = self.display_date == datetime.date.today()
-
-        for event in events:
+        for event in visible_events:
             is_current = False
             all_day = event.get("all_day", False)
 
@@ -364,9 +450,9 @@ class CalendarWidget:
                     start_dt = datetime.datetime.fromisoformat(event["start"])
                     end_dt = datetime.datetime.fromisoformat(event["end"])
                     if start_dt.tzinfo is None:
-                        start_dt = start_dt.astimezone()
+                        start_dt = start_dt.replace(tzinfo=self.cal_tz) if self.cal_tz else start_dt.astimezone()
                     if end_dt.tzinfo is None:
-                        end_dt = end_dt.astimezone()
+                        end_dt = end_dt.replace(tzinfo=self.cal_tz) if self.cal_tz else end_dt.astimezone()
                     is_current = start_dt <= now <= end_dt
                 except (ValueError, KeyError):
                     pass

@@ -50,7 +50,7 @@
 ## 6. アプリの起動
 
 ```bash
-cd C:\Users\tsuba\dev\Claude-TodayGoogleCalentder
+cd <プロジェクトディレクトリ>
 .\venv\Scripts\python.exe main.py
 ```
 
