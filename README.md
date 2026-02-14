@@ -11,13 +11,26 @@ Windowsデスクトップ上に常駐する、Googleカレンダーの予定表�
 - **予定一覧表示** - 時刻・タイトル・場所を表示
 - **日付ナビゲーション** - 前日・翌日の予定を確認可能
 - **現在進行中の予定ハイライト** - 今の時間帯の予定を強調表示
+- **過ぎた予定の自動非表示** - 今日の終了済み予定を自動で非表示
 - **アラート通知** - 予定の5分前にポップアップ＋サウンドで通知（ON/OFF切替）
 - **Google Calendarリンク** - ワンクリックでブラウザのGoogle Calendarを開く
 - **ドラッグ移動** - ヘッダーをドラッグしてデスクトップ上の好きな位置に配置
 - **システムトレイ常駐** - 閉じるボタンでトレイに格納、ダブルクリックで復元
 - **右クリックメニュー** - 更新 / 今日に戻る / 最前面切替 / 終了
 
-## セットアップ
+## ダウンロード（exe版）
+
+Python不要ですぐに使えます。
+
+1. [Releases](https://github.com/tsubasagit/ToDayGoogleCalender/releases) から最新の ZIP をダウンロード
+2. ZIP を解凍
+3. [SETUP.md](SETUP.md) を参考に Google Cloud Console で `credentials.json` を取得
+4. `credentials.json` を `CalendarWidget.exe` と同じフォルダに配置
+5. `CalendarWidget.exe` をダブルクリックで起動
+
+> **注意**: 現在 Windows ARM64 版のみ提供しています。x86_64 PC をお使いの場合は、下記の「ソースから実行」をご利用ください。
+
+## ソースから実行（開発者向け）
 
 ### 1. Google Cloud Console の設定
 
@@ -44,7 +57,7 @@ python -m venv venv
 .\venv\Scripts\python.exe main.py
 ```
 
-初回起動時にブラウザが開き、Googleアカウントの認証を求められます。認証後は `token.json` が保存され、次回以降は自動ログインします。
+初回起動時にウィジェット上に「ログイン」ボタンが表示されます。クリックするとブラウザでGoogle認証が開始され、認証後は自動で予定が表示されます。
 
 ## 操作方法
 
@@ -53,24 +66,11 @@ python -m venv venv
 | ◀ 前日 / 翌日 ▶ | 表示日を切り替え |
 | 今日 | 今日の予定に戻る |
 | ↻ | 予定を再取得 |
-| 🔔 | アラート通知の ON/OFF |
+| 🔔 | アラート通知の ON/OFF（5分前通知） |
 | ✕ | トレイに格納 |
 | 右クリック | コンテキストメニュー |
 | ヘッダードラッグ | ウィンドウ移動 |
 | Google Calendar ↗ | ブラウザで Google Calendar を開く |
-
-## ファイル構成
-
-```
-Claude-TodayGoogleCalentder/
-├── main.py              # エントリーポイント
-├── calendar_api.py      # Google Calendar API 連携
-├── widget.py            # tkinter ウィジェット UI
-├── requirements.txt     # 依存パッケージ
-├── SETUP.md             # Google Cloud Console セットアップガイド
-├── credentials.json     # OAuth認証情報（要手動配置）
-└── token.json           # 認証トークン（自動生成）
-```
 
 ## 技術スタック
 

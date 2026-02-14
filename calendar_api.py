@@ -1,4 +1,5 @@
 import os
+import sys
 import stat
 import datetime
 from zoneinfo import ZoneInfo
@@ -9,7 +10,10 @@ from googleapiclient.discovery import build
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TOKEN_PATH = os.path.join(BASE_DIR, "token.json")
 CREDENTIALS_PATH = os.path.join(BASE_DIR, "credentials.json")
 
