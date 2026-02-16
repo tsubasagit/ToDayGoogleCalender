@@ -78,13 +78,13 @@ class CalendarWidget:
         close_btn.pack(side=tk.RIGHT, padx=(0, 4))
         close_btn.bind("<Button-1>", lambda e: self._hide_to_tray())
 
-        # ログアウトボタン
-        logout_btn = tk.Label(
-            self.header, text=" ログアウト ", bg=self.HEADER_BG, fg=self.TIME_COLOR,
-            font=("Segoe UI", 9), cursor="hand2", pady=6,
+        # 設定ボタン（ギア）
+        settings_btn = tk.Label(
+            self.header, text=" \u2699 ", bg=self.HEADER_BG, fg=self.TIME_COLOR,
+            font=("Segoe UI", 11), cursor="hand2", pady=6,
         )
-        logout_btn.pack(side=tk.RIGHT)
-        logout_btn.bind("<Button-1>", lambda e: self._do_logout())
+        settings_btn.pack(side=tk.RIGHT)
+        settings_btn.bind("<Button-1>", lambda e: self._show_settings())
 
         # 更新ボタン
         refresh_btn = tk.Label(
@@ -379,6 +379,77 @@ class CalendarWidget:
         """ログアウトしてログイン画面を表示する。"""
         logout()
         self._show_login_screen()
+
+    def _show_settings(self):
+        """設定ウィンドウを表示する。"""
+        tw = tk.Toplevel(self.root)
+        tw.title("設定")
+        tw.overrideredirect(True)
+        tw.attributes("-topmost", True)
+        tw.configure(bg=self.BG_COLOR)
+        tw.geometry("280x240")
+        x = self.root.winfo_x() + (self.width - 280) // 2
+        y = self.root.winfo_y() + 60
+        tw.geometry(f"280x240+{x}+{y}")
+
+        def close_settings():
+            tw.destroy()
+
+        # ヘッダー（閉じるボタン）
+        header = tk.Frame(tw, bg=self.HEADER_BG)
+        header.pack(fill=tk.X)
+        close_label = tk.Label(
+            header, text=" \u2715 ", bg=self.HEADER_BG, fg=self.TIME_COLOR,
+            font=("Segoe UI", 10), cursor="hand2", pady=4,
+        )
+        close_label.pack(side=tk.RIGHT)
+        close_label.bind("<Button-1>", lambda e: close_settings())
+        tk.Label(
+            header, text=" 設定 ", bg=self.HEADER_BG, fg=self.ACCENT_COLOR,
+            font=("Segoe UI", 10, "bold"), anchor="w",
+        ).pack(side=tk.LEFT)
+        tk.Frame(tw, bg=self.BORDER_COLOR, height=1).pack(fill=tk.X)
+
+        # 設定内容
+        frame = tk.Frame(tw, bg=self.BG_COLOR, padx=16, pady=16)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        tk.Label(
+            frame, text="現在のアカウント",
+            bg=self.BG_COLOR, fg=self.TIME_COLOR,
+            font=("Segoe UI", 8), anchor="w",
+        ).pack(fill=tk.X)
+        account_text = "Googleでログイン中" if is_logged_in() else "未ログイン"
+        tk.Label(
+            frame, text=account_text,
+            bg=self.BG_COLOR, fg=self.FG_COLOR,
+            font=("Segoe UI", 9), anchor="w",
+        ).pack(fill=tk.X)
+        tk.Frame(frame, bg=self.BORDER_COLOR, height=1).pack(fill=tk.X, pady=(0, 12))
+
+        logout_label = tk.Label(
+            frame, text="ログアウト", bg=self.BG_COLOR, fg=self.ACCENT_COLOR,
+            font=("Segoe UI", 9, "underline"), cursor="hand2", anchor="w",
+        )
+        logout_label.pack(fill=tk.X)
+        logout_label.bind("<Button-1>", lambda e: (close_settings(), self._do_logout()))
+        tk.Frame(frame, bg=self.BORDER_COLOR, height=1).pack(fill=tk.X, pady=(0, 16))
+
+        tk.Label(
+            frame, text="サービス名  TodayGoogleCalender",
+            bg=self.BG_COLOR, fg=self.TIME_COLOR,
+            font=("Segoe UI", 8), anchor="w",
+        ).pack(fill=tk.X)
+        tk.Label(
+            frame, text="作成者: tsubasa_miyazaki",
+            bg=self.BG_COLOR, fg=self.TIME_COLOR,
+            font=("Segoe UI", 8), anchor="w",
+        ).pack(fill=tk.X)
+        tk.Label(
+            frame, text="AppTalentHub",
+            bg=self.BG_COLOR, fg=self.ACCENT_COLOR,
+            font=("Segoe UI", 8), anchor="w",
+        ).pack(fill=tk.X)
 
     # === イベント取得・表示 ===
 
