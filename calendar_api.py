@@ -29,6 +29,15 @@ def is_logged_in():
         return False
 
 
+def logout():
+    """トークンを削除してログアウトする。"""
+    if os.path.exists(TOKEN_PATH):
+        try:
+            os.remove(TOKEN_PATH)
+        except OSError:
+            pass
+
+
 def login():
     """OAuth認証フローを実行してログインする。"""
     if not os.path.exists(CREDENTIALS_PATH):

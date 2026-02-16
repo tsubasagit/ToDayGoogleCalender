@@ -6,7 +6,7 @@ import winsound
 from zoneinfo import ZoneInfo
 import pystray
 from PIL import Image, ImageDraw
-from calendar_api import get_events_for_date, is_logged_in, login
+from calendar_api import get_events_for_date, is_logged_in, login, logout
 
 
 class CalendarWidget:
@@ -77,6 +77,14 @@ class CalendarWidget:
         )
         close_btn.pack(side=tk.RIGHT, padx=(0, 4))
         close_btn.bind("<Button-1>", lambda e: self._hide_to_tray())
+
+        # ログアウトボタン
+        logout_btn = tk.Label(
+            self.header, text=" ログアウト ", bg=self.HEADER_BG, fg=self.TIME_COLOR,
+            font=("Segoe UI", 9), cursor="hand2", pady=6,
+        )
+        logout_btn.pack(side=tk.RIGHT)
+        logout_btn.bind("<Button-1>", lambda e: self._do_logout())
 
         # 更新ボタン
         refresh_btn = tk.Label(
@@ -167,6 +175,7 @@ class CalendarWidget:
         self.context_menu.add_command(label="更新", command=self._refresh_events)
         self.context_menu.add_command(label="今日に戻る", command=self._go_today)
         self.context_menu.add_command(label="最前面 ON/OFF", command=self._toggle_topmost)
+        self.context_menu.add_command(label="ログアウト", command=self._do_logout)
         self.context_menu.add_separator()
         self.context_menu.add_command(label="終了", command=self._quit)
         self.root.bind("<Button-3>", self._show_context_menu)
@@ -365,6 +374,11 @@ class CalendarWidget:
                 self.root.after(0, lambda: self._update_display([{"error": str(e)}]))
 
         threading.Thread(target=run_login, daemon=True).start()
+
+    def _do_logout(self):
+        """ログアウトしてログイン画面を表示する。"""
+        logout()
+        self._show_login_screen()
 
     # === イベント取得・表示 ===
 
