@@ -3,12 +3,15 @@ import sys
 import stat
 import datetime
 from zoneinfo import ZoneInfo
-from google.auth.transport.requests import Request
+from google.auth.transport.requests import AuthorizedSession, Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
+SCOPES = [
+    "https://www.googleapis.com/auth/calendar.readonly",
+    "https://www.googleapis.com/auth/userinfo.email",
+]
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = os.path.dirname(sys.executable)
@@ -36,6 +39,22 @@ def logout():
             os.remove(TOKEN_PATH)
         except OSError:
             pass
+
+
+def get_user_email():
+    """ログイン中のGoogleアカウントのメールアドレスを返す。未ログインや取得失敗時はNone。"""
+    if not is_logged_in():
+        return None
+    try:
+        creds = get_credentials()
+        session = AuthorizedSession(creds)
+        resp = session.get("https://www.googleapis.com/oauth2/v2/userinfo")
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        return data.get("email") or None
+    except Exception:
+        return None
 
 
 def login():

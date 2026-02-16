@@ -6,7 +6,7 @@ import winsound
 from zoneinfo import ZoneInfo
 import pystray
 from PIL import Image, ImageDraw
-from calendar_api import get_events_for_date, is_logged_in, login, logout
+from calendar_api import get_events_for_date, get_user_email, is_logged_in, login, logout
 
 
 class CalendarWidget:
@@ -419,7 +419,11 @@ class CalendarWidget:
             bg=self.BG_COLOR, fg=self.TIME_COLOR,
             font=("Segoe UI", 8), anchor="w",
         ).pack(fill=tk.X)
-        account_text = "Googleでログイン中" if is_logged_in() else "未ログイン"
+        if is_logged_in():
+            email = get_user_email()
+            account_text = email if email else "Googleでログイン中"
+        else:
+            account_text = "未ログイン"
         tk.Label(
             frame, text=account_text,
             bg=self.BG_COLOR, fg=self.FG_COLOR,
